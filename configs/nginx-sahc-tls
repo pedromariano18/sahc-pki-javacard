@@ -1,0 +1,18 @@
+server {
+    listen 8443 ssl;
+    server_name localhost;
+
+    ssl_certificate     /home/mariano/Uni/Mestrado/SAHC/work/tls-server/server.crt;
+    ssl_certificate_key /home/mariano/Uni/Mestrado/SAHC/work/tls-server/server.key;
+    ssl_protocols TLSv1.2;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    # Exigir certificado cliente assinado pela nossa Root CA
+    ssl_client_certificate /home/mariano/Uni/Mestrado/SAHC/work/rootCA.crt;
+    ssl_verify_client on;
+    error_log /var/log/nginx/sahc-tls-error.log debug;
+    location / {
+        return 200 'SAHC TLS Authentication OK - Cliente: $ssl_client_s_dn\n';
+        add_header Content-Type text/plain;
+    }
+	
+}
