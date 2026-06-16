@@ -7,9 +7,14 @@ Diogo Valverde (up202509119), Pedro Mariano (up202509341), Pedro Teixeira (up202
 ## What is included
 
 ```
-group5-project/
+sahc-pki-javacard/
 ├── README.md
 ├── report.pdf
+├── certs/
+│   └── rootCA.crt
+├── configs/
+│   ├── nginx-sahc-tls
+│   └── pam_pkcs11.conf
 └── src/
     ├── SmartcardSigner.java
     ├── pom.xml
@@ -17,9 +22,18 @@ group5-project/
     └── pkcs11-cc-sign.cfg
 ```
 
-The remaining scenarios (SSH, TLS, PAM, S/MIME) were performed using standard
-unmodified applications and are fully documented in the report. They do not require
-additional custom code.
+- `certs/rootCA.crt` — the SAHC Root CA certificate, used both to complete the PDF
+  signing chain (Step 1) and to verify the signature/TLS client certs afterwards.
+- `configs/nginx-sahc-tls` — the nginx server block used for the mutual-TLS
+  authentication scenario (client certs are checked against `rootCA.crt`). Update the
+  `ssl_certificate*` and `ssl_client_certificate` paths before using it on another machine.
+- `configs/pam_pkcs11.conf` — the `pam_pkcs11` configuration used for the smartcard-based
+  PAM login scenario.
+
+The SSH and S/MIME scenarios were performed using standard unmodified applications and
+are fully documented in the report; they require no custom code or config beyond what
+those applications already provide. The TLS and PAM scenarios use the config files
+above (adapted from their distribution defaults) — also documented in detail in the report.
 
 ---
 
@@ -60,7 +74,8 @@ And the root CA certificate path:
 new FileInputStream(System.getProperty("user.home") + "/Uni/Mestrado/SAHC/work/rootCA.crt")
 ```
 
-Change these to the local paths of your input PDF, output PDF, and root CA certificate.
+Change these to the local paths of your input PDF and output PDF. For the root CA, you
+can point this at the `certs/rootCA.crt` file included in this repo, or your own.
 
 The PKCS#11 config path can be overridden at runtime without editing the source:
 
@@ -83,8 +98,14 @@ pkcs11-tool --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so -O
 
 ## Step 3 — Build
 
+`pom.xml` lives in `src/` but expects sources at the standard Maven layout
+(`src/main/java/...`), while `SmartcardSigner.java` ships flat next to it. Move it into
+place once, then build:
+
 ```bash
-cd src/pdf-signer
+cd src
+mkdir -p src/main/java/pt/up/fc/sahc
+mv SmartcardSigner.java src/main/java/pt/up/fc/sahc/
 mvn clean compile
 ```
 
@@ -126,5 +147,5 @@ Certificate Validation: Certificate is Trusted
 ```
 
 The certificate will only appear as trusted if the SAHC Root CA (or the Citizen Card
-state CA) is trusted locally. For the IsoApplet token, import `rootCA.crt` into the
-system trust store before verifying.
+state CA) is trusted locally. For the IsoApplet token, import `certs/rootCA.crt` into
+the system trust store before verifying.
